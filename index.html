@@ -46,469 +46,281 @@
 					</script>
 				</section>
 
-				<section data-markdown data-separator-vertical="^\n;;;\n$">
+				<section id="the-challenge" data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
-						<!-- .slide: data-background="img/iz_safe.gif" -->
+						<!-- .slide: data-background="img/manual-transmission.jpg" -->
 
-						# Safe <!-- .element class="drop-shadow" -->
-						### What is safety? <!-- .element class="fragment drop-shadow" -->
-
-						;;;
-
-						# Safe
-						### What is unsafe?
-						- Unsafe Memory Access <!-- .element class="fragment" -->
-						- Iterator Invalidation <!-- .element class="fragment" -->
-						- Data Races <!-- .element class="fragment" -->
-						- Etc. <!-- .element class="fragment" -->
+						# Design <!-- .element class="bold-drop-shadow" -->
+						### According to Shigley's Mechanical Engineering Design <!-- .element class="fragment bold-drop-shadow" -->
 
 						;;;
 
-						# Memory Safety
-
-						```rust
-						fn main() {
-						    let mut x = vec![10, 20]; //Create vec owned by x
-						    let y = &x[0]; //Reference the first element of x
-						    x.push(30); //Error: might invalidate reference y
-						}
-						```
-
-						<div class="pre-left-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| ...      |       |      |
-						| 0xFC     | 0x00  | y    |
-						| 0xFD     | 2     | x (capacity) |
-						| 0xFE     | 2     | x (length)   |
-						| 0xFF     | 0x00  | x (pointer)  |
-
-						<div class="pre-right-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| 0x00     | 10    |      |
-						| 0x01     | 20    |      |
-						| 0x02     |       |      |
-						| ...      |       |      |
+						> Design is an innovative and highly iterative process. It is also a decision-making process. Decisions sometimes have to be made with too little information, […]. Decisions are sometimes made tentatively, with the right reserved to adjust as more becomes known. 
 
 						;;;
 
-						# Memory Safety
-						## Contributing Factors
-						1. Aliasing - Multiple references <!-- .element class="fragment" -->
-						2. Mutation - Modification of values <!-- .element class="fragment" -->
+						> Real problems resist compartmentalization. A simple journal bearing involves fluid flow, heat transfer, friction, energy transport, material selection, thermomechanical treatments, statistical descriptions, and so on.
+
+						![Journal Bearing](img/JournalBearing.jpg) <!-- .element class="fragment" -->
+
+						;;;
+
+						All this to say: 
+
+						Design is **HARD**
+
 					</script>
 				</section>
 
-				<section id="ownership" data-markdown data-separator-vertical="^\n;;;\n$">
+				<section id="factoring" data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
-						<!-- .slide: data-background="img/trophy.gif" -->
+						<!-- .slide: data-background="img/math-bg.jpg" -->
 
-						# Ownership <!-- .element class="drop-shadow" -->
-
-						;;;
-
-						# Ownership
-						1. All resources have a clear owner.
-						2. Others can borrow from the owner.
-						3. Owner cannot free or mutate the resource while it is borrowed.
+						# Math <!-- .element class="drop-shadow" -->
 
 						;;;
 
-						# Automatic Cleanup
+						<!-- .slide: data-background="img/math-hate.jpg" -->
 
-						```rust
-						fn automatic_cleanup() {
-						    let mut v = Vec::new(); //Create Vec on Heap
-						    v.push(10); //Add elements
-						    v.push(20); //Backing store is resized if needed
-						    v.push(30);
-						    println!("vec: {:?}", v);
-						} //Vec has now gone out of scope and is immediately freed
-						```
-
-						<div class="pre-left-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| ...      |       |      |
-						| 0xFD     | 3     | v (capacity) |
-						| 0xFE     | 3     | v (length)   |
-						| 0xFF     | 0x00  | v (pointer)  |
-
-						<div class="pre-right-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| 0x00     | 10    |      |
-						| 0x01     | 20    |      |
-						| 0x02     | 30    |      |
-						| ...      |       |      |
+						# Math <!-- .element class="drop-shadow" -->
+						### What is Factoring? <!-- .element class="fragment drop-shadow" -->
 
 						;;;
 
-						# Giving Ownership
+						# Factoring
 
-						```rust
-						fn give_vec() {
-						    let vec = vec![1, 2, 3];
-						    take_ownership(vec);
-						    // no longer have access to vec, so this would fail to compile
-						    //println!("{:?}", vec);
-						}
+						f(x) = x^2 + 2x - 3 <!-- .element class="fragment" -->
 
-						fn take_ownership(vec : Vec<i32>){
-						    println!("owned vec: {:?}", vec);
-						} //Vec has now gone out of scope and is immediately freed
-						```
+						f(x) = (x + 3) * (x - 1) <!-- .element class="fragment" -->
 
-						```rust
-						owned vec: [1, 2, 3]
-						```
+						solve for f(x) = 0 <!-- .element class="fragment" -->
+
+						x = -3 or 1 <!-- .element class="fragment" -->
 
 						;;;
 
-						# Giving Ownership
+						# Factoring
 
-						```rust
-						fn return_vec() {
-						    let vec = vec![1, 2, 3];
-						    let vec2 = return_ownership(vec);
-						    // no longer have access to vec, so this would fail.
-						    println!("returned vec: {:?}", vec2);
-						} // Vec2 freed
-
-						fn return_ownership(vec: Vec<i32>) -> Vec<i32> {
-						    println!("owned vec: {:?}", vec);
-						    vec // Return the vec from the function
-						}
-						```
-
-						```rust
-						owned vec: [1, 2, 3]
-						returned vec: [1, 2, 3]
-						```
+						Allows you to choose the **representation** that makes your problem easiest to solve.
 
 						;;;
 
-						# Borrow Immutable
-
-						```rust
-						fn pass_vec() {
-						    let vec = vec![4, 5, 6];
-						    borrow_ref(&vec);
-						    // vec is still owned, so we can access it.
-						    println!("vec: {:?}", vec);
-						}
-
-						fn borrow_ref(vec: &Vec<i32>) {
-						    // Passed in an immutable reference to our Vec.
-						    println!("borrowed vec: {:?}", vec);
-						    // Error: Cannot mutate an immutable reference.
-						    // vec.push(50);
-						} //Borrow has gone out of scope
-						```
-
-						```rust
-						borrowed vec: [4, 5, 6]
-						vec: [4, 5, 6]
-						```
+						# Which Representation is Best?
 
 						;;;
 
-						# Borrow Mutable
+						# Representation
 
-						```rust
-						fn pass_vec_mut() {
-						    let mut vec = vec![7,8,9];
-						    borrow_mut(&mut vec);
-						    println!("vec: {:?}", vec);
-						}
+						* Simple as Possible <!-- .element class="fragment" -->
+						* Cohesive <!-- .element class="fragment" -->
+						* Dependencies Explicit <!-- .element class="fragment" -->
+						* "Pit of Success" <!-- .element class="fragment" -->
 
-						fn borrow_mut(vec: &mut Vec<i32>) {
-						    println!("borrowed mut vec: {:?}", vec);
-						    // in effect we have temporary ownership.
-						    vec.push(50);
-						    vec[0] += 100;
-						}
-						```
+						;;;
 
-						```rust
-						borrowed mut vec: [7, 8, 9]
-						vec: [107, 8, 9, 50]
-						```
+						# Representation
+
+						* **P**it of Success
+						* **A**s Simple as Possible
+						* **C**ohesive
+						* **D**ependencies Explicit
+
 					</script>
 				</section>
 
-				<section id="memory-safety" data-markdown data-separator-vertical="^\n;;;\n$">
+				<section id="simple" data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
-						<!-- .slide: data-background="img/neuralizer.gif" -->
+						# Simple As Possible
 
-						# Memory Safety <!-- .element class="drop-shadow" -->
-
-						;;;
-
-						# Memory Safety
-
-						```rust
-						fn main() {
-						    let mut x = vec![10, 20]; //Create vec owned by x
-						    let y = &x[0]; //Borrow(Reference) the first element of x
-						    x.push(30); //Error: might invalidate reference y
-						}
-						```
-
-						<div class="pre-left-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| ...      |       |      |
-						| 0xFC     | 0x00  | y    |
-						| 0xFD     | 2     | x (capacity) |
-						| 0xFE     | 2     | x (length)   |
-						| 0xFF     | 0x00  | x (pointer)  |
-
-						<div class="pre-right-table"></div>
-
-						| Location | Value | Name |
-						| -------- | ----- | ---- |
-						| 0x00     | 10    |      |
-						| 0x01     | 20    |      |
-						| 0x02     |       |      |
-						| ...      |       |      |
+						<iframe class="stretch" src="https://www.youtube.com/embed/TUbjzvu1DqE?start=65&amp;end=93" frameborder="0" allowfullscreen=""></iframe>
 
 						;;;
 
-						# Memory Safety
+						# Simple As Possible
 
-						```rust
-						fn main() {
-						    let mut x = vec![10, 20]; //Create vec owned by x
-						    let y = &x[0]; //Borrow(Reference) the first element of x
-						    x.push(30); //Error: might invalidate reference y
-						}
-						```
+						* Types of Complexity
+							* Inherent (Essential) <!-- .element class="fragment" -->
+							* Incidental (Oops!) <!-- .element class="fragment" -->
 
-						```rust
-						error: cannot borrow `x` as mutable because it is also borrowed as immutable
-						    x.push(30);
-						    ^
-						note: previous borrow of `x` occurs here; the immutable borrow prevents
-						subsequent moves or mutable borrows of `x` until the borrow ends
-						    let y = &x[0];
-						             ^
-						note: previous borrow ends here
-						fn main() {
+						&nbsp;
 
-						}
-						^
-						```
+						### Complexity Justified? <!-- .element class="fragment" -->
+						### Can We Do Less? <!-- .element class="fragment" -->
+
+						;;;
+
+						![Seriously](img/seriously.gif) <!-- .element class="stretch" -->
+
+						;;;
+
+						![Fire](img/fire.gif) <!-- .element class="stretch" -->
+
+						;;;
+
+						![Fire Extinguisher](img/fire-extinguisher.gif) <!-- .element class="stretch" -->
+
+						;;;
+
+						# Simple As Possible
+
+						<iframe class="stretch" src="https://www.youtube.com/embed/4QgeQAiSmM8" frameborder="0" allowfullscreen=""></iframe>
 					</script>
 				</section>
 
-
-
-
-				<section data-markdown data-separator-vertical="^\n;;;\n$">
+				<section id="cohesion" data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
-						<!-- .slide: data-background="img/bike-race.gif" -->
+						# Cohesion
 
-						# Concurrent <!-- .element class="drop-shadow" -->
-
-						;;;
-
-						# Concurrency
-						### What are the issues?
+						> Degree to which the elements of a module belong together <!-- .element class="fragment" -->
 
 						;;;
 
-						# Data Race
-
-						Two unsyncronized threads accessing same data where at least one writes
+						<!-- .slide: data-background="img/cookies-milk.jpg" -->
 
 						;;;
 
-						## Models of Concurrency
-						1. Actor Model (Erlang) <!-- .element class="fragment" -->
-							- Data shared through message passing
-							- No aliasing of values
-						2. ReadOnly Model (Haskell) <!-- .element class="fragment" -->
-							- Data shared by reference
-							- No mutation allowed
-						3. Locking Model (C++) <!-- .element class="fragment" -->
-							- Data shared by reference
-							- One thread allowed to mutate/read at a time.
+						<!-- .slide: data-background="img/bacon-eggs.jpg" -->
 
 						;;;
 
-						# Actor Model
-
-						```rust
-						fn actor() {
-						    let mut handles: Vec<thread::JoinHandle<i32>> = Vec::new();
-
-						    for i in 0..10 {
-						    	// returns a handle that can be waited on to retrieve the result
-						        let handle = thread::spawn(move || {
-						            i
-						        });
-						        handles.push(handle);
-						    }
-
-						    let vec = handles.into_iter()
-						    	.map(|h| h.join().unwrap())
-						    	.collect::<Vec<_>>();
-
-						    println!("{:?}", vec);
-						}
-						```
-
-						```rust
-						[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-						```
+						<!-- .slide: data-background="img/copy-paste.png" -->
 
 						;;;
 
-						# Actor Model
-
-						```rust
-						fn actor_channel() {
-						    let (tx, rx) = mpsc::channel();
-
-						    for i in 0..10 {
-						        let thread_tx = tx.clone(); // Transmit channel for this thread
-						        thread::spawn(move || { // Move local variables into the closure
-						            thread_tx.send(i).unwrap();
-						            thread_tx.send(i).unwrap();
-						        });
-						        // i and thread_tx are now owned by the closure.
-						    }
-
-						    for i in 0..20 {
-						        print!("{:?} ", rx.recv().unwrap());
-						    }
-						}
-						```
-
-						```rust
-						0 0 5 2 2 3 3 4 4 1 1 5 7 7 6 6 8 8 9 9
-						```
+						<!-- .slide: data-background="img/burger-fries.jpg" -->
 
 						;;;
 
-						# ReadOnly Model
-
-						```rust
-						fn read_only() {
-						    // Atomically Reference Counted ~= "&"
-						    let vec = Arc::new(vec![10,20,33,44,50,100,125,300,322,42]);
-						    let (tx, rx) = mpsc::channel();
-
-						    for i in 0..10 {
-						        let thread_tx = tx.clone();
-						        let thread_vec = vec.clone(); // Reference Count ++
-						        thread::spawn(move || {
-						            thread_tx.send(thread_vec[i]).unwrap();
-						        }); // Reference Count --
-						    }
-
-						    for i in 0..10 {
-						        print!("{:?} ", rx.recv().unwrap());
-						    }
-						} // Reference Count --
-						```
-
-						```rust
-						10 20 33 322 44 300 50 42 100 125 
-						```
+						<!-- .slide: data-background="img/poo-toiletpaper.jpg" -->
 
 						;;;
 
-						# Locking Model
+						<!-- .slide: data-background="img/not-cohesive.png" -->
 
-						```rust
-						fn locking() {
-						    let arc_data = Arc::new(Mutex::new(0u32));
-						    let (tx, rx) = mpsc::channel();
+						;;;
 
-						    for _ in 0..10 {
-						        let (thread_mutex, thread_tx) = (arc_data.clone(), tx.clone());
-						        thread::spawn(move || {
-						            let mut unlocked_data = thread_mutex.lock().unwrap();
-						            *unlocked_data += 1;
-						            thread_tx.send(()).unwrap();
-						        });
-						    }
+						<!-- .slide: data-background="img/cohesive.png" -->
 
-						    for _ in 0..10 {
-						        rx.recv().unwrap();
-						    }
-						    println!("{:?}", *arc_data.lock().unwrap());
-						}
-						```
+						;;;
 
-						```rust
-						10
-						```
+						![Programming!](img/programming!.gif) <!-- .element class="stretch" -->
 					</script>
 				</section>
 
-
-
-				
-				<section id="fast" data-markdown data-separator-vertical="^\n;;;\n$">
+				<section id="dependencies" data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
-						<!-- .slide: data-background="img/flash.gif" -->
-
-						# Fast <!-- .element class="drop-shadow" -->
+						# Dependencies Explicit
 
 						;;;
 
-						# Ray tracer
-						[[pt 1]](http://xania.org/201505/two-commutes-with-rust)
-						[[pt 2]](http://xania.org/201505/on-rust-performance)
+						# Dependencies
 
-						![](img/raytracer.png)
-
-						;;;
-
-						# Ray tracer
-						[[pt 1]](http://xania.org/201505/two-commutes-with-rust)
-						[[pt 2]](http://xania.org/201505/on-rust-performance)
-
-						![](img/raytracer-perf.png)
+						* Configuration
+						* Databases
+						* Remote Services
+						* Internal Services
+						* Files
+						* Data
 
 						;;;
 
-						<!-- .slide: data-background="img/bench-cnn.jpg" -->
+						# Dependencies
+
+						> What your code requires to do its job.
 
 						;;;
 
-						<!-- .slide: data-background="img/bench-reddit.jpg" -->
+						# Explicit
+
+						> “Programs must be written for people to read, and only incidentally for machines to execute.”
+
+						> -Harold Abelson, Structure and Interpretation of Computer Programs
 
 						;;;
 
-						## Micro benchmarks
-						### Buyer beware
+						# Dependencies Explicit
 
-						[benchmarksgame.alioth.debian.org](http://benchmarksgame.alioth.debian.org/)
+						> Pass Dependencies In
+
+						;;;
+
+						<!-- .slide: data-background="img/coding.gif" -->
 					</script>
 				</section>
 
+				<section id="pit-of-success" data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/sarlacc-pit.jpg" -->
 
+						# Design for the <!-- .element class="drop-shadow" -->
+						# "Pit of Success" <!-- .element class="drop-shadow" -->
 
+						;;;
+
+						# Pit of Success
+
+						> Make it easy to "fall into winning practices"
+
+						&nbsp;
+
+						> a well-designed system makes it easy to do the right things and annoying (but not impossible) to do the wrong things <!-- .element class="fragment" -->
+
+						;;;
+
+						# Assumptions
+						### Every API has them
+
+						* Documentation (Good) <!-- .element class="fragment" -->
+						* Readme (Better) <!-- .element class="fragment" -->
+						* Codified (Best) <!-- .element class="fragment" -->
+
+						;;;
+
+						![Awesome Programmer](img/programmer.gif) <!-- .element class="stretch" -->
+					</script>
+				</section>
+
+				<section id="bugs-exceptions" data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						# Bugs
+
+						* Exceptions are for recoverable errors; but many errors are not recoverable!
+						* A bug is an error the programmer didn't expect; a recoverable error is an expected condition, resulting from programmatic data validation
+
+						| Bugs                      | Bugs                   | Recoverable           |
+						| -------------------------------------------------- |                       |
+						| Incorrect cast            | Out of memory          | I/O failure           |
+						| Dereferencing null        | Stack overflow         | Parsing error         |
+						| Array index out-of-bounds | Precondition violation | Data validation error |
+						| Divide by zero            | Assertion failure      | &nbsp;                |
+						| Arithmetic under/overflow | Explicit abandonment   | &nbsp;                |
+
+						;;;
+
+						# [C# Systems Programming](https://qconnewyork.com/system/files/presentation-slides/csysprog-qcon-june2016.pdf)
+					</script>
+				</section>
 
 				<section data-markdown data-separator-vertical="^\n;;;\n$">
 					<script type="text/template">
 						## Slides
 
-						ghotiphud.github.io/rust-intro
+						ghotiphud.github.io/factoring-your-code
 
-						## Try it out
+						## Blog posts
+						ghotiphud.github.io
+					</script>
+				</section>
 
-						play.rust-lang.org/
+				<section data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						# Ghoti
+
+						gh == cough
+
+						o == women
+
+						ti == caution
 					</script>
 				</section>
 			</div>
