@@ -13,9 +13,7 @@ namespace Hangman{
             string wordToGuess = wordBank[random.Next(0, wordBank.Length)];
             string wordToGuessUppercase = wordToGuess.ToUpper();
 
-            var displayToPlayer = new StringBuilder(wordToGuess.Length);
-            for (int i = 0; i < wordToGuess.Length; i++)
-                displayToPlayer.Append('_');
+            var displayToPlayer = new StringBuilder(new String('_', wordToGuess.Length));
 
             var correctGuesses = new List<char>();
             var incorrectGuesses = new List<char>();

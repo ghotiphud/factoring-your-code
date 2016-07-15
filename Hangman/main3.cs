@@ -2,77 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
 
 namespace Hangman{
-    public class Game {
-        private readonly string _wordToGuess;
-        private readonly string _wordToGuessUppercase;
-        private readonly StringBuilder _wordDisplay;
-        private int _lives;
-        private int _lettersRevealed;
-
-        private readonly List<char> _correctGuesses = new List<char>();
-        private readonly List<char> _incorrectGuesses = new List<char>();
-
-        public bool Finished { get { return Won || _lives == 0; } }
-        public bool Won { get { return _lettersRevealed == _wordToGuess.Length; } }
-
-        public Game(string wordToGuess, int lives){
-            _wordToGuess = wordToGuess;
-            _wordToGuessUppercase = wordToGuess.ToUpper();
-            _lives = lives;
-
-            _wordDisplay = new StringBuilder(new String('_', _wordToGuess.Length));
-        }
-
-        public GuessResult MakeGuess(char guess){
-            guess = Char.ToUpper(guess);
-
-            // Not new-ing this struct to allow the 
-            // compiler to catch unset properties.
-            // If GuessType were not set in one of the 
-            // branches it would not compile
-            GuessResult result;
-
-            if (_correctGuesses.Contains(guess))
-            {
-                result.GuessType = GuessType.PreviousCorrect;
-            }
-            else if (_incorrectGuesses.Contains(guess))
-            {
-                result.GuessType = GuessType.PreviousIncorrect;
-            }
-            else if (_wordToGuessUppercase.Contains(guess))
-            {
-                result.GuessType = GuessType.Correct;
-                _correctGuesses.Add(guess);
-
-                RevealLetter(guess);
-            }
-            else
-            {
-                result.GuessType = GuessType.Incorrect;
-                _incorrectGuesses.Add(guess);
-                _lives--;
-            }
-
-            result.WordDisplay = _wordDisplay.ToString();
-            return result;
-        }
-
-        private void RevealLetter(char guess){
-            for (int i = 0; i < _wordToGuess.Length; i++) 
-            {
-                if (_wordToGuessUppercase[i] == guess)
-                {
-                    _wordDisplay[i] = _wordToGuess[i];
-                    _lettersRevealed++;
-                }
-            }
-        }
-    }
-
     public enum GuessType{
         None,
         PreviousCorrect,
@@ -84,6 +15,70 @@ namespace Hangman{
     public struct GuessResult{
         public string WordDisplay { get; set; }
         public GuessType GuessType { get; set; }
+    }
+
+    public class Game {
+        public string WordToGuess { get; set; }
+        public string WordToGuessUppercase { get; set; }
+        public int Lives { get; set; }
+        public StringBuilder WordDisplay { get; set; }
+
+        private int _lettersRevealed;
+        private readonly List<char> _correctGuesses = new List<char>();
+        private readonly List<char> _incorrectGuesses = new List<char>();
+
+        public bool Finished { get { return Won || Lives == 0; } }
+        public bool Won { get { return _lettersRevealed == WordToGuess.Length; } }
+
+        public Game(string wordToGuess, int lives){
+            WordToGuess = wordToGuess;
+            WordToGuessUppercase = wordToGuess.ToUpper();
+            Lives = lives;
+
+            WordDisplay = new StringBuilder(new String('_', wordToGuess.Length));
+        }
+
+        public GuessResult MakeGuess(char guess){
+            guess = Char.ToUpper(guess);
+
+            GuessResult result;
+
+            if (_correctGuesses.Contains(guess))
+            {
+                result.GuessType = GuessType.PreviousCorrect;
+            }
+            else if (_incorrectGuesses.Contains(guess))
+            {
+                result.GuessType = GuessType.PreviousIncorrect;
+            }
+            else if (WordToGuessUppercase.Contains(guess))
+            {
+                result.GuessType = GuessType.Correct;
+                _correctGuesses.Add(guess);
+
+                RevealLetter(guess);
+            }
+            else
+            {
+                result.GuessType = GuessType.Incorrect;
+                _incorrectGuesses.Add(guess);
+                Lives--;
+            }
+
+            result.WordDisplay = WordDisplay.ToString();
+            return result;
+        }
+
+        private void RevealLetter(char letter){
+            for (int i = 0; i < WordToGuess.Length; i++) 
+            {
+                if (WordToGuessUppercase[i] == letter)
+                {
+                    WordDisplay[i] = WordToGuess[i];
+                    _lettersRevealed++;
+                }
+            }
+        }
     }
 
     public static class Program {
@@ -99,7 +94,7 @@ namespace Hangman{
             string input;
             char guess;
 
-            while (!game.Finished) 
+            while (!game.Finished)
             {
                 Console.Write("Guess a letter: ");
 
@@ -120,9 +115,6 @@ namespace Hangman{
                         break;
                     case GuessType.Incorrect:
                         Console.WriteLine("Nope, there's no '{0}' in it!", guess);
-                        break;
-                    default:
-                        Trace.Fail("Unexpected GuessType returned");
                         break;
                 }
                 
