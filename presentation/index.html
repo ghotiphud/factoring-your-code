@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Intro to Rust</title>
+
+		<meta name="description" content="Intro to the Rust programming language">
+		<meta name="author" content="Yale Cason III">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/monokai.css">
+		<link rel="stylesheet" href="css/custom.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						# Factoring Your Code
+
+						Yale Cason III
+					</script>
+				</section>
+
+				<section data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/iz_safe.gif" -->
+
+						# Safe <!-- .element class="drop-shadow" -->
+						### What is safety? <!-- .element class="fragment drop-shadow" -->
+
+						;;;
+
+						# Safe
+						### What is unsafe?
+						- Unsafe Memory Access <!-- .element class="fragment" -->
+						- Iterator Invalidation <!-- .element class="fragment" -->
+						- Data Races <!-- .element class="fragment" -->
+						- Etc. <!-- .element class="fragment" -->
+
+						;;;
+
+						# Memory Safety
+
+						```rust
+						fn main() {
+						    let mut x = vec![10, 20]; //Create vec owned by x
+						    let y = &x[0]; //Reference the first element of x
+						    x.push(30); //Error: might invalidate reference y
+						}
+						```
+
+						<div class="pre-left-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| ...      |       |      |
+						| 0xFC     | 0x00  | y    |
+						| 0xFD     | 2     | x (capacity) |
+						| 0xFE     | 2     | x (length)   |
+						| 0xFF     | 0x00  | x (pointer)  |
+
+						<div class="pre-right-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| 0x00     | 10    |      |
+						| 0x01     | 20    |      |
+						| 0x02     |       |      |
+						| ...      |       |      |
+
+						;;;
+
+						# Memory Safety
+						## Contributing Factors
+						1. Aliasing - Multiple references <!-- .element class="fragment" -->
+						2. Mutation - Modification of values <!-- .element class="fragment" -->
+					</script>
+				</section>
+
+				<section id="ownership" data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/trophy.gif" -->
+
+						# Ownership <!-- .element class="drop-shadow" -->
+
+						;;;
+
+						# Ownership
+						1. All resources have a clear owner.
+						2. Others can borrow from the owner.
+						3. Owner cannot free or mutate the resource while it is borrowed.
+
+						;;;
+
+						# Automatic Cleanup
+
+						```rust
+						fn automatic_cleanup() {
+						    let mut v = Vec::new(); //Create Vec on Heap
+						    v.push(10); //Add elements
+						    v.push(20); //Backing store is resized if needed
+						    v.push(30);
+						    println!("vec: {:?}", v);
+						} //Vec has now gone out of scope and is immediately freed
+						```
+
+						<div class="pre-left-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| ...      |       |      |
+						| 0xFD     | 3     | v (capacity) |
+						| 0xFE     | 3     | v (length)   |
+						| 0xFF     | 0x00  | v (pointer)  |
+
+						<div class="pre-right-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| 0x00     | 10    |      |
+						| 0x01     | 20    |      |
+						| 0x02     | 30    |      |
+						| ...      |       |      |
+
+						;;;
+
+						# Giving Ownership
+
+						```rust
+						fn give_vec() {
+						    let vec = vec![1, 2, 3];
+						    take_ownership(vec);
+						    // no longer have access to vec, so this would fail to compile
+						    //println!("{:?}", vec);
+						}
+
+						fn take_ownership(vec : Vec<i32>){
+						    println!("owned vec: {:?}", vec);
+						} //Vec has now gone out of scope and is immediately freed
+						```
+
+						```rust
+						owned vec: [1, 2, 3]
+						```
+
+						;;;
+
+						# Giving Ownership
+
+						```rust
+						fn return_vec() {
+						    let vec = vec![1, 2, 3];
+						    let vec2 = return_ownership(vec);
+						    // no longer have access to vec, so this would fail.
+						    println!("returned vec: {:?}", vec2);
+						} // Vec2 freed
+
+						fn return_ownership(vec: Vec<i32>) -> Vec<i32> {
+						    println!("owned vec: {:?}", vec);
+						    vec // Return the vec from the function
+						}
+						```
+
+						```rust
+						owned vec: [1, 2, 3]
+						returned vec: [1, 2, 3]
+						```
+
+						;;;
+
+						# Borrow Immutable
+
+						```rust
+						fn pass_vec() {
+						    let vec = vec![4, 5, 6];
+						    borrow_ref(&vec);
+						    // vec is still owned, so we can access it.
+						    println!("vec: {:?}", vec);
+						}
+
+						fn borrow_ref(vec: &Vec<i32>) {
+						    // Passed in an immutable reference to our Vec.
+						    println!("borrowed vec: {:?}", vec);
+						    // Error: Cannot mutate an immutable reference.
+						    // vec.push(50);
+						} //Borrow has gone out of scope
+						```
+
+						```rust
+						borrowed vec: [4, 5, 6]
+						vec: [4, 5, 6]
+						```
+
+						;;;
+
+						# Borrow Mutable
+
+						```rust
+						fn pass_vec_mut() {
+						    let mut vec = vec![7,8,9];
+						    borrow_mut(&mut vec);
+						    println!("vec: {:?}", vec);
+						}
+
+						fn borrow_mut(vec: &mut Vec<i32>) {
+						    println!("borrowed mut vec: {:?}", vec);
+						    // in effect we have temporary ownership.
+						    vec.push(50);
+						    vec[0] += 100;
+						}
+						```
+
+						```rust
+						borrowed mut vec: [7, 8, 9]
+						vec: [107, 8, 9, 50]
+						```
+					</script>
+				</section>
+
+				<section id="memory-safety" data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/neuralizer.gif" -->
+
+						# Memory Safety <!-- .element class="drop-shadow" -->
+
+						;;;
+
+						# Memory Safety
+
+						```rust
+						fn main() {
+						    let mut x = vec![10, 20]; //Create vec owned by x
+						    let y = &x[0]; //Borrow(Reference) the first element of x
+						    x.push(30); //Error: might invalidate reference y
+						}
+						```
+
+						<div class="pre-left-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| ...      |       |      |
+						| 0xFC     | 0x00  | y    |
+						| 0xFD     | 2     | x (capacity) |
+						| 0xFE     | 2     | x (length)   |
+						| 0xFF     | 0x00  | x (pointer)  |
+
+						<div class="pre-right-table"></div>
+
+						| Location | Value | Name |
+						| -------- | ----- | ---- |
+						| 0x00     | 10    |      |
+						| 0x01     | 20    |      |
+						| 0x02     |       |      |
+						| ...      |       |      |
+
+						;;;
+
+						# Memory Safety
+
+						```rust
+						fn main() {
+						    let mut x = vec![10, 20]; //Create vec owned by x
+						    let y = &x[0]; //Borrow(Reference) the first element of x
+						    x.push(30); //Error: might invalidate reference y
+						}
+						```
+
+						```rust
+						error: cannot borrow `x` as mutable because it is also borrowed as immutable
+						    x.push(30);
+						    ^
+						note: previous borrow of `x` occurs here; the immutable borrow prevents
+						subsequent moves or mutable borrows of `x` until the borrow ends
+						    let y = &x[0];
+						             ^
+						note: previous borrow ends here
+						fn main() {
+
+						}
+						^
+						```
+					</script>
+				</section>
+
+
+
+
+				<section data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/bike-race.gif" -->
+
+						# Concurrent <!-- .element class="drop-shadow" -->
+
+						;;;
+
+						# Concurrency
+						### What are the issues?
+
+						;;;
+
+						# Data Race
+
+						Two unsyncronized threads accessing same data where at least one writes
+
+						;;;
+
+						## Models of Concurrency
+						1. Actor Model (Erlang) <!-- .element class="fragment" -->
+							- Data shared through message passing
+							- No aliasing of values
+						2. ReadOnly Model (Haskell) <!-- .element class="fragment" -->
+							- Data shared by reference
+							- No mutation allowed
+						3. Locking Model (C++) <!-- .element class="fragment" -->
+							- Data shared by reference
+							- One thread allowed to mutate/read at a time.
+
+						;;;
+
+						# Actor Model
+
+						```rust
+						fn actor() {
+						    let mut handles: Vec<thread::JoinHandle<i32>> = Vec::new();
+
+						    for i in 0..10 {
+						    	// returns a handle that can be waited on to retrieve the result
+						        let handle = thread::spawn(move || {
+						            i
+						        });
+						        handles.push(handle);
+						    }
+
+						    let vec = handles.into_iter()
+						    	.map(|h| h.join().unwrap())
+						    	.collect::<Vec<_>>();
+
+						    println!("{:?}", vec);
+						}
+						```
+
+						```rust
+						[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+						```
+
+						;;;
+
+						# Actor Model
+
+						```rust
+						fn actor_channel() {
+						    let (tx, rx) = mpsc::channel();
+
+						    for i in 0..10 {
+						        let thread_tx = tx.clone(); // Transmit channel for this thread
+						        thread::spawn(move || { // Move local variables into the closure
+						            thread_tx.send(i).unwrap();
+						            thread_tx.send(i).unwrap();
+						        });
+						        // i and thread_tx are now owned by the closure.
+						    }
+
+						    for i in 0..20 {
+						        print!("{:?} ", rx.recv().unwrap());
+						    }
+						}
+						```
+
+						```rust
+						0 0 5 2 2 3 3 4 4 1 1 5 7 7 6 6 8 8 9 9
+						```
+
+						;;;
+
+						# ReadOnly Model
+
+						```rust
+						fn read_only() {
+						    // Atomically Reference Counted ~= "&"
+						    let vec = Arc::new(vec![10,20,33,44,50,100,125,300,322,42]);
+						    let (tx, rx) = mpsc::channel();
+
+						    for i in 0..10 {
+						        let thread_tx = tx.clone();
+						        let thread_vec = vec.clone(); // Reference Count ++
+						        thread::spawn(move || {
+						            thread_tx.send(thread_vec[i]).unwrap();
+						        }); // Reference Count --
+						    }
+
+						    for i in 0..10 {
+						        print!("{:?} ", rx.recv().unwrap());
+						    }
+						} // Reference Count --
+						```
+
+						```rust
+						10 20 33 322 44 300 50 42 100 125 
+						```
+
+						;;;
+
+						# Locking Model
+
+						```rust
+						fn locking() {
+						    let arc_data = Arc::new(Mutex::new(0u32));
+						    let (tx, rx) = mpsc::channel();
+
+						    for _ in 0..10 {
+						        let (thread_mutex, thread_tx) = (arc_data.clone(), tx.clone());
+						        thread::spawn(move || {
+						            let mut unlocked_data = thread_mutex.lock().unwrap();
+						            *unlocked_data += 1;
+						            thread_tx.send(()).unwrap();
+						        });
+						    }
+
+						    for _ in 0..10 {
+						        rx.recv().unwrap();
+						    }
+						    println!("{:?}", *arc_data.lock().unwrap());
+						}
+						```
+
+						```rust
+						10
+						```
+					</script>
+				</section>
+
+
+
+				
+				<section id="fast" data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						<!-- .slide: data-background="img/flash.gif" -->
+
+						# Fast <!-- .element class="drop-shadow" -->
+
+						;;;
+
+						# Ray tracer
+						[[pt 1]](http://xania.org/201505/two-commutes-with-rust)
+						[[pt 2]](http://xania.org/201505/on-rust-performance)
+
+						![](img/raytracer.png)
+
+						;;;
+
+						# Ray tracer
+						[[pt 1]](http://xania.org/201505/two-commutes-with-rust)
+						[[pt 2]](http://xania.org/201505/on-rust-performance)
+
+						![](img/raytracer-perf.png)
+
+						;;;
+
+						<!-- .slide: data-background="img/bench-cnn.jpg" -->
+
+						;;;
+
+						<!-- .slide: data-background="img/bench-reddit.jpg" -->
+
+						;;;
+
+						## Micro benchmarks
+						### Buyer beware
+
+						[benchmarksgame.alioth.debian.org](http://benchmarksgame.alioth.debian.org/)
+					</script>
+				</section>
+
+
+
+
+				<section data-markdown data-separator-vertical="^\n;;;\n$">
+					<script type="text/template">
+						## Slides
+
+						ghotiphud.github.io/rust-intro
+
+						## Try it out
+
+						play.rust-lang.org/
+					</script>
+				</section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', callback: function() { hljs.initHighlightingOnLoad(); } },
+					//{ src: 'plugin/zoom-js/zoom.js', async: true },
+					//{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

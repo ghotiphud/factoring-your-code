@@ -1,0 +1,33 @@
+.pre-left-table + table {
+	float: left;
+}
+
+.pre-right-table + table {
+	float: right;
+}
+
+.reveal table {
+	font-size: .7em;
+}
+
+.reveal table td + td, 
+.reveal table th + th {
+	border-left: 1px dotted #666;
+}
+
+.reveal table th {
+	border-bottom: 7px double;
+	padding-bottom: .1em;
+}
+
+.reveal pre {
+	width: 95%;
+}
+
+.reveal pre code {
+	max-height: 500px;
+}
+
+.reveal .drop-shadow {
+	text-shadow: 0px 0px 7px #000;
+}
