@@ -46,7 +46,7 @@ namespace Hangman{
         public GuessResult MakeGuess(char guess){
             guess = Char.ToUpper(guess);
 
-            GuessResult result;
+            GuessResult result = new GuessResult();
 
             if (_correctGuesses.Contains(guess))
             {
